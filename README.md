@@ -33,14 +33,14 @@ This repository contains the code for an advanced interactive assistant powered 
 1. Clone the repository.
 2. Install the required dependencies:
    ```bash
-   pip install openai opencv-python-headless sounddevice numpy soundfile speechrecognition whisper playsound pyautogui langchain_community
+   pip install openai opencv-python-headless sounddevice numpy soundfile speechrecognition whisper playsound pyautogui langchain_community singlestoredb
    ```
 3. Set your OpenAI API key in the environment variable `OPENAI_API_KEY`.
 4. Set your SingleStoreDB URL in the environment variable `SINGLESTOREDB_URL`.
 5. Place your documents (e.g., `pytorch_docs.txt`) in the same directory.
 6. Run the main script:
    ```bash
-   python main.py
+   python computer_assistant.py or python assistant.py
    ```
 
 ### Future Enhancements
