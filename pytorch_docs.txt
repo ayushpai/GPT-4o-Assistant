@@ -1,0 +1,1278 @@
+Tensors
+Tensors are a specialized data structure that are very similar to arrays and matrices. In PyTorch, we use tensors to encode the inputs and outputs of a model, as well as the model’s parameters.
+
+Tensors are similar to NumPy’s ndarrays, except that tensors can run on GPUs or other hardware accelerators. In fact, tensors and NumPy arrays can often share the same underlying memory, eliminating the need to copy data (see Bridge with NumPy). Tensors are also optimized for automatic differentiation (we’ll see more about that later in the Autograd section). If you’re familiar with ndarrays, you’ll be right at home with the Tensor API. If not, follow along!
+
+import torch
+import numpy as np
+Initializing a Tensor
+Tensors can be initialized in various ways. Take a look at the following examples:
+
+Directly from data
+
+Tensors can be created directly from data. The data type is automatically inferred.
+
+data = [[1, 2],[3, 4]]
+x_data = torch.tensor(data)
+From a NumPy array
+
+Tensors can be created from NumPy arrays (and vice versa - see Bridge with NumPy).
+
+np_array = np.array(data)
+x_np = torch.from_numpy(np_array)
+From another tensor:
+
+The new tensor retains the properties (shape, datatype) of the argument tensor, unless explicitly overridden.
+
+x_ones = torch.ones_like(x_data) # retains the properties of x_data
+print(f"Ones Tensor: \n {x_ones} \n")
+
+x_rand = torch.rand_like(x_data, dtype=torch.float) # overrides the datatype of x_data
+print(f"Random Tensor: \n {x_rand} \n")
+Ones Tensor:
+ tensor([[1, 1],
+        [1, 1]])
+
+Random Tensor:
+ tensor([[0.8823, 0.9150],
+        [0.3829, 0.9593]])
+With random or constant values:
+
+shape is a tuple of tensor dimensions. In the functions below, it determines the dimensionality of the output tensor.
+
+shape = (2,3,)
+rand_tensor = torch.rand(shape)
+ones_tensor = torch.ones(shape)
+zeros_tensor = torch.zeros(shape)
+
+print(f"Random Tensor: \n {rand_tensor} \n")
+print(f"Ones Tensor: \n {ones_tensor} \n")
+print(f"Zeros Tensor: \n {zeros_tensor}")
+Random Tensor:
+ tensor([[0.3904, 0.6009, 0.2566],
+        [0.7936, 0.9408, 0.1332]])
+
+Ones Tensor:
+ tensor([[1., 1., 1.],
+        [1., 1., 1.]])
+
+Zeros Tensor:
+ tensor([[0., 0., 0.],
+        [0., 0., 0.]])
+Attributes of a Tensor
+Tensor attributes describe their shape, datatype, and the device on which they are stored.
+
+tensor = torch.rand(3,4)
+
+print(f"Shape of tensor: {tensor.shape}")
+print(f"Datatype of tensor: {tensor.dtype}")
+print(f"Device tensor is stored on: {tensor.device}")
+Shape of tensor: torch.Size([3, 4])
+Datatype of tensor: torch.float32
+Device tensor is stored on: cpu
+Operations on Tensors
+Over 100 tensor operations, including arithmetic, linear algebra, matrix manipulation (transposing, indexing, slicing), sampling and more are comprehensively described here.
+
+Each of these operations can be run on the GPU (at typically higher speeds than on a CPU). If you’re using Colab, allocate a GPU by going to Runtime > Change runtime type > GPU.
+
+By default, tensors are created on the CPU. We need to explicitly move tensors to the GPU using .to method (after checking for GPU availability). Keep in mind that copying large tensors across devices can be expensive in terms of time and memory!
+
+# We move our tensor to the GPU if available
+if torch.cuda.is_available():
+    tensor = tensor.to("cuda")
+Try out some of the operations from the list. If you’re familiar with the NumPy API, you’ll find the Tensor API a breeze to use.
+
+Standard numpy-like indexing and slicing:
+
+tensor = torch.ones(4, 4)
+print(f"First row: {tensor[0]}")
+print(f"First column: {tensor[:, 0]}")
+print(f"Last column: {tensor[..., -1]}")
+tensor[:,1] = 0
+print(tensor)
+First row: tensor([1., 1., 1., 1.])
+First column: tensor([1., 1., 1., 1.])
+Last column: tensor([1., 1., 1., 1.])
+tensor([[1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.]])
+Joining tensors You can use torch.cat to concatenate a sequence of tensors along a given dimension. See also torch.stack, another tensor joining operator that is subtly different from torch.cat.
+
+t1 = torch.cat([tensor, tensor, tensor], dim=1)
+print(t1)
+tensor([[1., 0., 1., 1., 1., 0., 1., 1., 1., 0., 1., 1.],
+        [1., 0., 1., 1., 1., 0., 1., 1., 1., 0., 1., 1.],
+        [1., 0., 1., 1., 1., 0., 1., 1., 1., 0., 1., 1.],
+        [1., 0., 1., 1., 1., 0., 1., 1., 1., 0., 1., 1.]])
+Arithmetic operations
+
+# This computes the matrix multiplication between two tensors. y1, y2, y3 will have the same value
+# ``tensor.T`` returns the transpose of a tensor
+y1 = tensor @ tensor.T
+y2 = tensor.matmul(tensor.T)
+
+y3 = torch.rand_like(y1)
+torch.matmul(tensor, tensor.T, out=y3)
+
+
+# This computes the element-wise product. z1, z2, z3 will have the same value
+z1 = tensor * tensor
+z2 = tensor.mul(tensor)
+
+z3 = torch.rand_like(tensor)
+torch.mul(tensor, tensor, out=z3)
+tensor([[1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.]])
+Single-element tensors If you have a one-element tensor, for example by aggregating all values of a tensor into one value, you can convert it to a Python numerical value using item():
+
+agg = tensor.sum()
+agg_item = agg.item()
+print(agg_item, type(agg_item))
+12.0 <class 'float'>
+In-place operations Operations that store the result into the operand are called in-place. They are denoted by a _ suffix. For example: x.copy_(y), x.t_(), will change x.
+
+print(f"{tensor} \n")
+tensor.add_(5)
+print(tensor)
+tensor([[1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.],
+        [1., 0., 1., 1.]])
+
+tensor([[6., 5., 6., 6.],
+        [6., 5., 6., 6.],
+        [6., 5., 6., 6.],
+        [6., 5., 6., 6.]])
+NOTE
+
+In-place operations save some memory, but can be problematic when computing derivatives because of an immediate loss of history. Hence, their use is discouraged.
+
+Bridge with NumPy
+Tensors on the CPU and NumPy arrays can share their underlying memory locations, and changing one will change the other.
+
+Tensor to NumPy array
+t = torch.ones(5)
+print(f"t: {t}")
+n = t.numpy()
+print(f"n: {n}")
+t: tensor([1., 1., 1., 1., 1.])
+n: [1. 1. 1. 1. 1.]
+A change in the tensor reflects in the NumPy array.
+
+t.add_(1)
+print(f"t: {t}")
+print(f"n: {n}")
+t: tensor([2., 2., 2., 2., 2.])
+n: [2. 2. 2. 2. 2.]
+NumPy array to Tensor
+n = np.ones(5)
+t = torch.from_numpy(n)
+Changes in the NumPy array reflects in the tensor.
+
+np.add(n, 1, out=n)
+print(f"t: {t}")
+print(f"n: {n}")
+t: tensor([2., 2., 2., 2., 2.], dtype=torch.float64)
+n: [2. 2. 2. 2. 2.]
+
+Datasets & DataLoaders
+Code for processing data samples can get messy and hard to maintain; we ideally want our dataset code to be decoupled from our model training code for better readability and modularity. PyTorch provides two data primitives: torch.utils.data.DataLoader and torch.utils.data.Dataset that allow you to use pre-loaded datasets as well as your own data. Dataset stores the samples and their corresponding labels, and DataLoader wraps an iterable around the Dataset to enable easy access to the samples.
+
+PyTorch domain libraries provide a number of pre-loaded datasets (such as FashionMNIST) that subclass torch.utils.data.Dataset and implement functions specific to the particular data. They can be used to prototype and benchmark your model. You can find them here: Image Datasets, Text Datasets, and Audio Datasets
+
+Loading a Dataset
+Here is an example of how to load the Fashion-MNIST dataset from TorchVision. Fashion-MNIST is a dataset of Zalando’s article images consisting of 60,000 training examples and 10,000 test examples. Each example comprises a 28×28 grayscale image and an associated label from one of 10 classes.
+
+We load the FashionMNIST Dataset with the following parameters:
+root is the path where the train/test data is stored,
+
+train specifies training or test dataset,
+
+download=True downloads the data from the internet if it’s not available at root.
+
+transform and target_transform specify the feature and label transformations
+
+import torch
+from torch.utils.data import Dataset
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+import matplotlib.pyplot as plt
+
+
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz to data/FashionMNIST/raw/train-images-idx3-ubyte.gz
+
+  0%|          | 0/26421880 [00:00<?, ?it/s]
+  0%|          | 65536/26421880 [00:00<01:12, 362941.24it/s]
+  1%|          | 229376/26421880 [00:00<00:38, 679548.05it/s]
+  4%|3         | 950272/26421880 [00:00<00:11, 2180361.23it/s]
+ 12%|#2        | 3276800/26421880 [00:00<00:03, 6371430.17it/s]
+ 33%|###3      | 8847360/26421880 [00:00<00:00, 18051331.15it/s]
+ 43%|####2     | 11272192/26421880 [00:01<00:00, 16481873.29it/s]
+ 63%|######2   | 16613376/26421880 [00:01<00:00, 21130375.18it/s]
+ 83%|########2 | 21856256/26421880 [00:01<00:00, 23676950.69it/s]
+100%|##########| 26421880/26421880 [00:01<00:00, 18083434.20it/s]
+Extracting data/FashionMNIST/raw/train-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw/train-labels-idx1-ubyte.gz
+
+  0%|          | 0/29515 [00:00<?, ?it/s]
+100%|##########| 29515/29515 [00:00<00:00, 323619.68it/s]
+Extracting data/FashionMNIST/raw/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz
+
+  0%|          | 0/4422102 [00:00<?, ?it/s]
+  1%|1         | 65536/4422102 [00:00<00:12, 361198.12it/s]
+  5%|5         | 229376/4422102 [00:00<00:06, 678756.50it/s]
+ 19%|#9        | 851968/4422102 [00:00<00:01, 1932411.06it/s]
+ 60%|######    | 2654208/4422102 [00:00<00:00, 5077778.30it/s]
+100%|##########| 4422102/4422102 [00:00<00:00, 5997592.93it/s]
+Extracting data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz
+
+  0%|          | 0/5148 [00:00<?, ?it/s]
+100%|##########| 5148/5148 [00:00<00:00, 41364515.31it/s]
+Extracting data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+Iterating and Visualizing the Dataset
+We can index Datasets manually like a list: training_data[index]. We use matplotlib to visualize some samples in our training data.
+
+labels_map = {
+    0: "T-Shirt",
+    1: "Trouser",
+    2: "Pullover",
+    3: "Dress",
+    4: "Coat",
+    5: "Sandal",
+    6: "Shirt",
+    7: "Sneaker",
+    8: "Bag",
+    9: "Ankle Boot",
+}
+figure = plt.figure(figsize=(8, 8))
+cols, rows = 3, 3
+for i in range(1, cols * rows + 1):
+    sample_idx = torch.randint(len(training_data), size=(1,)).item()
+    img, label = training_data[sample_idx]
+    figure.add_subplot(rows, cols, i)
+    plt.title(labels_map[label])
+    plt.axis("off")
+    plt.imshow(img.squeeze(), cmap="gray")
+plt.show()
+Ankle Boot, Shirt, Bag, Ankle Boot, Trouser, Sandal, Coat, Sandal, Pullover
+Creating a Custom Dataset for your files
+A custom Dataset class must implement three functions: __init__, __len__, and __getitem__. Take a look at this implementation; the FashionMNIST images are stored in a directory img_dir, and their labels are stored separately in a CSV file annotations_file.
+
+In the next sections, we’ll break down what’s happening in each of these functions.
+
+import os
+import pandas as pd
+from torchvision.io import read_image
+
+class CustomImageDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+        self.img_labels = pd.read_csv(annotations_file)
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.img_labels)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        image = read_image(img_path)
+        label = self.img_labels.iloc[idx, 1]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
+__init__
+The __init__ function is run once when instantiating the Dataset object. We initialize the directory containing the images, the annotations file, and both transforms (covered in more detail in the next section).
+
+The labels.csv file looks like:
+
+tshirt1.jpg, 0
+tshirt2.jpg, 0
+......
+ankleboot999.jpg, 9
+def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+    self.img_labels = pd.read_csv(annotations_file)
+    self.img_dir = img_dir
+    self.transform = transform
+    self.target_transform = target_transform
+__len__
+The __len__ function returns the number of samples in our dataset.
+
+Example:
+
+def __len__(self):
+    return len(self.img_labels)
+__getitem__
+The __getitem__ function loads and returns a sample from the dataset at the given index idx. Based on the index, it identifies the image’s location on disk, converts that to a tensor using read_image, retrieves the corresponding label from the csv data in self.img_labels, calls the transform functions on them (if applicable), and returns the tensor image and corresponding label in a tuple.
+
+def __getitem__(self, idx):
+    img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+    image = read_image(img_path)
+    label = self.img_labels.iloc[idx, 1]
+    if self.transform:
+        image = self.transform(image)
+    if self.target_transform:
+        label = self.target_transform(label)
+    return image, label
+Preparing your data for training with DataLoaders
+The Dataset retrieves our dataset’s features and labels one sample at a time. While training a model, we typically want to pass samples in “minibatches”, reshuffle the data at every epoch to reduce model overfitting, and use Python’s multiprocessing to speed up data retrieval.
+
+DataLoader is an iterable that abstracts this complexity for us in an easy API.
+
+from torch.utils.data import DataLoader
+
+train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
+test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
+Iterate through the DataLoader
+We have loaded that dataset into the DataLoader and can iterate through the dataset as needed. Each iteration below returns a batch of train_features and train_labels (containing batch_size=64 features and labels respectively). Because we specified shuffle=True, after we iterate over all batches the data is shuffled (for finer-grained control over the data loading order, take a look at Samplers).
+
+# Display image and label.
+train_features, train_labels = next(iter(train_dataloader))
+print(f"Feature batch shape: {train_features.size()}")
+print(f"Labels batch shape: {train_labels.size()}")
+img = train_features[0].squeeze()
+label = train_labels[0]
+plt.imshow(img, cmap="gray")
+plt.show()
+print(f"Label: {label}")
+data tutorial
+Feature batch shape: torch.Size([64, 1, 28, 28])
+Labels batch shape: torch.Size([64])
+Label: 5
+
+Transforms
+Data does not always come in its final processed form that is required for training machine learning algorithms. We use transforms to perform some manipulation of the data and make it suitable for training.
+
+All TorchVision datasets have two parameters -transform to modify the features and target_transform to modify the labels - that accept callables containing the transformation logic. The torchvision.transforms module offers several commonly-used transforms out of the box.
+
+The FashionMNIST features are in PIL Image format, and the labels are integers. For training, we need the features as normalized tensors, and the labels as one-hot encoded tensors. To make these transformations, we use ToTensor and Lambda.
+
+import torch
+from torchvision import datasets
+from torchvision.transforms import ToTensor, Lambda
+
+ds = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor(),
+    target_transform=Lambda(lambda y: torch.zeros(10, dtype=torch.float).scatter_(0, torch.tensor(y), value=1))
+)
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz to data/FashionMNIST/raw/train-images-idx3-ubyte.gz
+
+  0%|          | 0/26421880 [00:00<?, ?it/s]
+  0%|          | 65536/26421880 [00:00<01:12, 361799.52it/s]
+  1%|          | 229376/26421880 [00:00<00:38, 681609.62it/s]
+  4%|3         | 950272/26421880 [00:00<00:11, 2187251.90it/s]
+ 14%|#4        | 3801088/26421880 [00:00<00:02, 8358853.43it/s]
+ 26%|##6       | 6979584/26421880 [00:00<00:01, 13150499.55it/s]
+ 46%|####6     | 12222464/26421880 [00:00<00:00, 21089481.02it/s]
+ 61%|######1   | 16187392/26421880 [00:01<00:00, 23587340.85it/s]
+ 78%|#######8  | 20676608/26421880 [00:01<00:00, 26461875.11it/s]
+ 93%|#########3| 24674304/26421880 [00:01<00:00, 27323735.08it/s]
+100%|##########| 26421880/26421880 [00:01<00:00, 19326580.74it/s]
+Extracting data/FashionMNIST/raw/train-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw/train-labels-idx1-ubyte.gz
+
+  0%|          | 0/29515 [00:00<?, ?it/s]
+100%|##########| 29515/29515 [00:00<00:00, 325001.14it/s]
+Extracting data/FashionMNIST/raw/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz
+
+  0%|          | 0/4422102 [00:00<?, ?it/s]
+  1%|1         | 65536/4422102 [00:00<00:12, 360045.62it/s]
+  3%|2         | 131072/4422102 [00:00<00:11, 359856.80it/s]
+  4%|4         | 196608/4422102 [00:00<00:11, 359823.59it/s]
+  7%|6         | 294912/4422102 [00:00<00:09, 430532.15it/s]
+  9%|8         | 393216/4422102 [00:00<00:08, 469591.26it/s]
+ 11%|#1        | 491520/4422102 [00:01<00:07, 493397.98it/s]
+ 14%|#4        | 622592/4422102 [00:01<00:06, 566509.18it/s]
+ 17%|#7        | 753664/4422102 [00:01<00:05, 614926.94it/s]
+ 20%|##        | 884736/4422102 [00:01<00:05, 648175.91it/s]
+ 24%|##3       | 1048576/4422102 [00:01<00:04, 724797.96it/s]
+ 27%|##7       | 1212416/4422102 [00:02<00:04, 779161.66it/s]
+ 32%|###1      | 1409024/4422102 [00:02<00:03, 868793.98it/s]
+ 36%|###6      | 1605632/4422102 [00:02<00:03, 934427.62it/s]
+ 41%|####1     | 1835008/4422102 [00:02<00:02, 1032734.40it/s]
+ 47%|####7     | 2097152/4422102 [00:02<00:02, 1154361.24it/s]
+ 53%|#####3    | 2359296/4422102 [00:02<00:01, 1241323.70it/s]
+ 60%|######    | 2654208/4422102 [00:03<00:01, 1368577.75it/s]
+ 65%|######5   | 2883584/4422102 [00:03<00:00, 1546220.46it/s]
+ 72%|#######1  | 3178496/4422102 [00:03<00:00, 1595914.95it/s]
+ 78%|#######7  | 3440640/4422102 [00:03<00:00, 1802592.70it/s]
+ 86%|########5 | 3801088/4422102 [00:03<00:00, 1881543.97it/s]
+ 96%|#########5| 4227072/4422102 [00:03<00:00, 2061338.49it/s]
+100%|##########| 4422102/4422102 [00:03<00:00, 1153608.50it/s]
+Extracting data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz
+
+  0%|          | 0/5148 [00:00<?, ?it/s]
+100%|##########| 5148/5148 [00:00<00:00, 36289541.16it/s]
+Extracting data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+ToTensor()
+ToTensor converts a PIL image or NumPy ndarray into a FloatTensor. and scales the image’s pixel intensity values in the range [0., 1.]
+
+Lambda Transforms
+Lambda transforms apply any user-defined lambda function. Here, we define a function to turn the integer into a one-hot encoded tensor. It first creates a zero tensor of size 10 (the number of labels in our dataset) and calls scatter_ which assigns a value=1 on the index as given by the label y.
+
+target_transform = Lambda(lambda y: torch.zeros(
+    10, dtype=torch.float).scatter_(dim=0, index=torch.tensor(y), value=1))
+
+
+Build the Neural Network
+Neural networks comprise of layers/modules that perform operations on data. The torch.nn namespace provides all the building blocks you need to build your own neural network. Every module in PyTorch subclasses the nn.Module. A neural network is a module itself that consists of other modules (layers). This nested structure allows for building and managing complex architectures easily.
+
+In the following sections, we’ll build a neural network to classify images in the FashionMNIST dataset.
+
+import os
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+Get Device for Training
+We want to be able to train our model on a hardware accelerator like the GPU or MPS, if available. Let’s check to see if torch.cuda or torch.backends.mps are available, otherwise we use the CPU.
+
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+Using cuda device
+Define the Class
+We define our neural network by subclassing nn.Module, and initialize the neural network layers in __init__. Every nn.Module subclass implements the operations on input data in the forward method.
+
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+We create an instance of NeuralNetwork, and move it to the device, and print its structure.
+
+model = NeuralNetwork().to(device)
+print(model)
+NeuralNetwork(
+  (flatten): Flatten(start_dim=1, end_dim=-1)
+  (linear_relu_stack): Sequential(
+    (0): Linear(in_features=784, out_features=512, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=512, out_features=512, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=512, out_features=10, bias=True)
+  )
+)
+To use the model, we pass it the input data. This executes the model’s forward, along with some background operations. Do not call model.forward() directly!
+
+Calling the model on the input returns a 2-dimensional tensor with dim=0 corresponding to each output of 10 raw predicted values for each class, and dim=1 corresponding to the individual values of each output. We get the prediction probabilities by passing it through an instance of the nn.Softmax module.
+
+X = torch.rand(1, 28, 28, device=device)
+logits = model(X)
+pred_probab = nn.Softmax(dim=1)(logits)
+y_pred = pred_probab.argmax(1)
+print(f"Predicted class: {y_pred}")
+Predicted class: tensor([7], device='cuda:0')
+Model Layers
+Let’s break down the layers in the FashionMNIST model. To illustrate it, we will take a sample minibatch of 3 images of size 28x28 and see what happens to it as we pass it through the network.
+
+input_image = torch.rand(3,28,28)
+print(input_image.size())
+torch.Size([3, 28, 28])
+nn.Flatten
+We initialize the nn.Flatten layer to convert each 2D 28x28 image into a contiguous array of 784 pixel values ( the minibatch dimension (at dim=0) is maintained).
+
+flatten = nn.Flatten()
+flat_image = flatten(input_image)
+print(flat_image.size())
+torch.Size([3, 784])
+nn.Linear
+The linear layer is a module that applies a linear transformation on the input using its stored weights and biases.
+
+layer1 = nn.Linear(in_features=28*28, out_features=20)
+hidden1 = layer1(flat_image)
+print(hidden1.size())
+torch.Size([3, 20])
+nn.ReLU
+Non-linear activations are what create the complex mappings between the model’s inputs and outputs. They are applied after linear transformations to introduce nonlinearity, helping neural networks learn a wide variety of phenomena.
+
+In this model, we use nn.ReLU between our linear layers, but there’s other activations to introduce non-linearity in your model.
+
+print(f"Before ReLU: {hidden1}\n\n")
+hidden1 = nn.ReLU()(hidden1)
+print(f"After ReLU: {hidden1}")
+Before ReLU: tensor([[ 0.4158, -0.0130, -0.1144,  0.3960,  0.1476, -0.0690, -0.0269,  0.2690,
+          0.1353,  0.1975,  0.4484,  0.0753,  0.4455,  0.5321, -0.1692,  0.4504,
+          0.2476, -0.1787, -0.2754,  0.2462],
+        [ 0.2326,  0.0623, -0.2984,  0.2878,  0.2767, -0.5434, -0.5051,  0.4339,
+          0.0302,  0.1634,  0.5649, -0.0055,  0.2025,  0.4473, -0.2333,  0.6611,
+          0.1883, -0.1250,  0.0820,  0.2778],
+        [ 0.3325,  0.2654,  0.1091,  0.0651,  0.3425, -0.3880, -0.0152,  0.2298,
+          0.3872,  0.0342,  0.8503,  0.0937,  0.1796,  0.5007, -0.1897,  0.4030,
+          0.1189, -0.3237,  0.2048,  0.4343]], grad_fn=<AddmmBackward0>)
+
+
+After ReLU: tensor([[0.4158, 0.0000, 0.0000, 0.3960, 0.1476, 0.0000, 0.0000, 0.2690, 0.1353,
+         0.1975, 0.4484, 0.0753, 0.4455, 0.5321, 0.0000, 0.4504, 0.2476, 0.0000,
+         0.0000, 0.2462],
+        [0.2326, 0.0623, 0.0000, 0.2878, 0.2767, 0.0000, 0.0000, 0.4339, 0.0302,
+         0.1634, 0.5649, 0.0000, 0.2025, 0.4473, 0.0000, 0.6611, 0.1883, 0.0000,
+         0.0820, 0.2778],
+        [0.3325, 0.2654, 0.1091, 0.0651, 0.3425, 0.0000, 0.0000, 0.2298, 0.3872,
+         0.0342, 0.8503, 0.0937, 0.1796, 0.5007, 0.0000, 0.4030, 0.1189, 0.0000,
+         0.2048, 0.4343]], grad_fn=<ReluBackward0>)
+nn.Sequential
+nn.Sequential is an ordered container of modules. The data is passed through all the modules in the same order as defined. You can use sequential containers to put together a quick network like seq_modules.
+
+seq_modules = nn.Sequential(
+    flatten,
+    layer1,
+    nn.ReLU(),
+    nn.Linear(20, 10)
+)
+input_image = torch.rand(3,28,28)
+logits = seq_modules(input_image)
+nn.Softmax
+The last linear layer of the neural network returns logits - raw values in [-infty, infty] - which are passed to the nn.Softmax module. The logits are scaled to values [0, 1] representing the model’s predicted probabilities for each class. dim parameter indicates the dimension along which the values must sum to 1.
+
+softmax = nn.Softmax(dim=1)
+pred_probab = softmax(logits)
+Model Parameters
+Many layers inside a neural network are parameterized, i.e. have associated weights and biases that are optimized during training. Subclassing nn.Module automatically tracks all fields defined inside your model object, and makes all parameters accessible using your model’s parameters() or named_parameters() methods.
+
+In this example, we iterate over each parameter, and print its size and a preview of its values.
+
+print(f"Model structure: {model}\n\n")
+
+for name, param in model.named_parameters():
+    print(f"Layer: {name} | Size: {param.size()} | Values : {param[:2]} \n")
+Model structure: NeuralNetwork(
+  (flatten): Flatten(start_dim=1, end_dim=-1)
+  (linear_relu_stack): Sequential(
+    (0): Linear(in_features=784, out_features=512, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=512, out_features=512, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=512, out_features=10, bias=True)
+  )
+)
+
+
+Layer: linear_relu_stack.0.weight | Size: torch.Size([512, 784]) | Values : tensor([[ 0.0273,  0.0296, -0.0084,  ..., -0.0142,  0.0093,  0.0135],
+        [-0.0188, -0.0354,  0.0187,  ..., -0.0106, -0.0001,  0.0115]],
+       device='cuda:0', grad_fn=<SliceBackward0>)
+
+Layer: linear_relu_stack.0.bias | Size: torch.Size([512]) | Values : tensor([-0.0155, -0.0327], device='cuda:0', grad_fn=<SliceBackward0>)
+
+Automatic Differentiation with torch.autograd
+When training neural networks, the most frequently used algorithm is back propagation. In this algorithm, parameters (model weights) are adjusted according to the gradient of the loss function with respect to the given parameter.
+
+To compute those gradients, PyTorch has a built-in differentiation engine called torch.autograd. It supports automatic computation of gradient for any computational graph.
+
+Consider the simplest one-layer neural network, with input x, parameters w and b, and some loss function. It can be defined in PyTorch in the following manner:
+
+import torch
+
+x = torch.ones(5)  # input tensor
+y = torch.zeros(3)  # expected output
+w = torch.randn(5, 3, requires_grad=True)
+b = torch.randn(3, requires_grad=True)
+z = torch.matmul(x, w)+b
+loss = torch.nn.functional.binary_cross_entropy_with_logits(z, y)
+Tensors, Functions and Computational graph
+This code defines the following computational graph:
+
+
+In this network, w and b are parameters, which we need to optimize. Thus, we need to be able to compute the gradients of loss function with respect to those variables. In order to do that, we set the requires_grad property of those tensors.
+
+NOTE
+
+You can set the value of requires_grad when creating a tensor, or later by using x.requires_grad_(True) method.
+
+A function that we apply to tensors to construct computational graph is in fact an object of class Function. This object knows how to compute the function in the forward direction, and also how to compute its derivative during the backward propagation step. A reference to the backward propagation function is stored in grad_fn property of a tensor. You can find more information of Function in the documentation.
+
+print(f"Gradient function for z = {z.grad_fn}")
+print(f"Gradient function for loss = {loss.grad_fn}")
+Gradient function for z = <AddBackward0 object at 0x7f3af10a6380>
+Gradient function for loss = <BinaryCrossEntropyWithLogitsBackward0 object at 0x7f3af10a5ea0>
+Computing Gradients
+To optimize weights of parameters in the neural network, we need to compute the derivatives of our loss function with respect to parameters, namely, we need 
+∂
+𝑙
+𝑜
+𝑠
+𝑠
+∂
+𝑤
+∂w
+∂loss
+​
+  and 
+∂
+𝑙
+𝑜
+𝑠
+𝑠
+∂
+𝑏
+∂b
+∂loss
+​
+  under some fixed values of x and y. To compute those derivatives, we call loss.backward(), and then retrieve the values from w.grad and b.grad:
+
+loss.backward()
+print(w.grad)
+print(b.grad)
+tensor([[0.3313, 0.0626, 0.2530],
+        [0.3313, 0.0626, 0.2530],
+        [0.3313, 0.0626, 0.2530],
+        [0.3313, 0.0626, 0.2530],
+        [0.3313, 0.0626, 0.2530]])
+tensor([0.3313, 0.0626, 0.2530])
+NOTE
+
+We can only obtain the grad properties for the leaf nodes of the computational graph, which have requires_grad property set to True. For all other nodes in our graph, gradients will not be available.
+
+We can only perform gradient calculations using backward once on a given graph, for performance reasons. If we need to do several backward calls on the same graph, we need to pass retain_graph=True to the backward call.
+
+Disabling Gradient Tracking
+By default, all tensors with requires_grad=True are tracking their computational history and support gradient computation. However, there are some cases when we do not need to do that, for example, when we have trained the model and just want to apply it to some input data, i.e. we only want to do forward computations through the network. We can stop tracking computations by surrounding our computation code with torch.no_grad() block:
+
+z = torch.matmul(x, w)+b
+print(z.requires_grad)
+
+with torch.no_grad():
+    z = torch.matmul(x, w)+b
+print(z.requires_grad)
+True
+False
+Another way to achieve the same result is to use the detach() method on the tensor:
+
+z = torch.matmul(x, w)+b
+z_det = z.detach()
+print(z_det.requires_grad)
+False
+There are reasons you might want to disable gradient tracking:
+To mark some parameters in your neural network as frozen parameters.
+
+To speed up computations when you are only doing forward pass, because computations on tensors that do not track gradients would be more efficient.
+
+More on Computational Graphs
+Conceptually, autograd keeps a record of data (tensors) and all executed operations (along with the resulting new tensors) in a directed acyclic graph (DAG) consisting of Function objects. In this DAG, leaves are the input tensors, roots are the output tensors. By tracing this graph from roots to leaves, you can automatically compute the gradients using the chain rule.
+
+In a forward pass, autograd does two things simultaneously:
+
+run the requested operation to compute a resulting tensor
+
+maintain the operation’s gradient function in the DAG.
+
+The backward pass kicks off when .backward() is called on the DAG root. autograd then:
+
+computes the gradients from each .grad_fn,
+
+accumulates them in the respective tensor’s .grad attribute
+
+using the chain rule, propagates all the way to the leaf tensors.
+
+NOTE
+
+DAGs are dynamic in PyTorch An important thing to note is that the graph is recreated from scratch; after each .backward() call, autograd starts populating a new graph. This is exactly what allows you to use control flow statements in your model; you can change the shape, size and operations at every iteration if needed.
+
+Optional Reading: Tensor Gradients and Jacobian Products
+In many cases, we have a scalar loss function, and we need to compute the gradient with respect to some parameters. However, there are cases when the output function is an arbitrary tensor. In this case, PyTorch allows you to compute so-called Jacobian product, and not the actual gradient.
+
+For a vector function 
+𝑦
+⃗
+=
+𝑓
+(
+𝑥
+⃗
+)
+y
+​
+ =f( 
+x
+ ), where 
+𝑥
+⃗
+=
+⟨
+𝑥
+1
+,
+…
+,
+𝑥
+𝑛
+⟩
+x
+ =⟨x 
+1
+​
+ ,…,x 
+n
+​
+ ⟩ and 
+𝑦
+⃗
+=
+⟨
+𝑦
+1
+,
+…
+,
+𝑦
+𝑚
+⟩
+y
+​
+ =⟨y 
+1
+​
+ ,…,y 
+m
+​
+ ⟩, a gradient of 
+𝑦
+⃗
+y
+​
+  with respect to 
+𝑥
+⃗
+x
+  is given by Jacobian matrix:
+
+𝐽
+=
+(
+∂
+𝑦
+1
+∂
+𝑥
+1
+⋯
+∂
+𝑦
+1
+∂
+𝑥
+𝑛
+⋮
+⋱
+⋮
+∂
+𝑦
+𝑚
+∂
+𝑥
+1
+⋯
+∂
+𝑦
+𝑚
+∂
+𝑥
+𝑛
+)
+J= 
+​
+  
+∂x 
+1
+​
+ 
+∂y 
+1
+​
+ 
+​
+ 
+⋮
+∂x 
+1
+​
+ 
+∂y 
+m
+​
+ 
+​
+ 
+​
+  
+⋯
+⋱
+⋯
+​
+  
+∂x 
+n
+​
+ 
+∂y 
+1
+​
+ 
+​
+ 
+⋮
+∂x 
+n
+​
+ 
+∂y 
+m
+​
+ 
+​
+ 
+​
+  
+​
+ 
+Instead of computing the Jacobian matrix itself, PyTorch allows you to compute Jacobian Product 
+𝑣
+𝑇
+⋅
+𝐽
+v 
+T
+ ⋅J for a given input vector 
+𝑣
+=
+(
+𝑣
+1
+…
+𝑣
+𝑚
+)
+v=(v 
+1
+​
+ …v 
+m
+​
+ ). This is achieved by calling backward with 
+𝑣
+v as an argument. The size of 
+𝑣
+v should be the same as the size of the original tensor, with respect to which we want to compute the product:
+
+inp = torch.eye(4, 5, requires_grad=True)
+out = (inp+1).pow(2).t()
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"First call\n{inp.grad}")
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"\nSecond call\n{inp.grad}")
+inp.grad.zero_()
+out.backward(torch.ones_like(out), retain_graph=True)
+print(f"\nCall after zeroing gradients\n{inp.grad}")
+First call
+tensor([[4., 2., 2., 2., 2.],
+        [2., 4., 2., 2., 2.],
+        [2., 2., 4., 2., 2.],
+        [2., 2., 2., 4., 2.]])
+
+Second call
+tensor([[8., 4., 4., 4., 4.],
+        [4., 8., 4., 4., 4.],
+        [4., 4., 8., 4., 4.],
+        [4., 4., 4., 8., 4.]])
+
+Call after zeroing gradients
+tensor([[4., 2., 2., 2., 2.],
+        [2., 4., 2., 2., 2.],
+        [2., 2., 4., 2., 2.],
+        [2., 2., 2., 4., 2.]])
+Notice that when we call backward for the second time with the same argument, the value of the gradient is different. This happens because when doing backward propagation, PyTorch accumulates the gradients, i.e. the value of computed gradients is added to the grad property of all leaf nodes of computational graph. If you want to compute the proper gradients, you need to zero out the grad property before. In real-life training an optimizer helps us to do this.
+
+Optimizing Model Parameters
+Now that we have a model and data it’s time to train, validate and test our model by optimizing its parameters on our data. Training a model is an iterative process; in each iteration the model makes a guess about the output, calculates the error in its guess (loss), collects the derivatives of the error with respect to its parameters (as we saw in the previous section), and optimizes these parameters using gradient descent. For a more detailed walkthrough of this process, check out this video on backpropagation from 3Blue1Brown.
+
+Prerequisite Code
+We load the code from the previous sections on Datasets & DataLoaders and Build Model.
+
+import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+
+training_data = datasets.FashionMNIST(
+    root="data",
+    train=True,
+    download=True,
+    transform=ToTensor()
+)
+
+test_data = datasets.FashionMNIST(
+    root="data",
+    train=False,
+    download=True,
+    transform=ToTensor()
+)
+
+train_dataloader = DataLoader(training_data, batch_size=64)
+test_dataloader = DataLoader(test_data, batch_size=64)
+
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10),
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+
+model = NeuralNetwork()
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz to data/FashionMNIST/raw/train-images-idx3-ubyte.gz
+
+  0%|          | 0/26421880 [00:00<?, ?it/s]
+  0%|          | 65536/26421880 [00:00<01:12, 361524.00it/s]
+  1%|          | 229376/26421880 [00:00<00:38, 679074.15it/s]
+  4%|3         | 950272/26421880 [00:00<00:11, 2178571.42it/s]
+ 11%|#1        | 3014656/26421880 [00:00<00:03, 6343920.39it/s]
+ 24%|##3       | 6225920/26421880 [00:00<00:01, 11959537.85it/s]
+ 40%|###9      | 10452992/26421880 [00:00<00:00, 19582861.62it/s]
+ 52%|#####1    | 13664256/26421880 [00:01<00:00, 21041380.33it/s]
+ 66%|######6   | 17563648/26421880 [00:01<00:00, 23770421.92it/s]
+ 86%|########5 | 22675456/26421880 [00:01<00:00, 27676369.79it/s]
+ 99%|#########9| 26279936/26421880 [00:01<00:00, 27696070.18it/s]
+100%|##########| 26421880/26421880 [00:01<00:00, 18145994.16it/s]
+Extracting data/FashionMNIST/raw/train-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw/train-labels-idx1-ubyte.gz
+
+  0%|          | 0/29515 [00:00<?, ?it/s]
+100%|##########| 29515/29515 [00:00<00:00, 327392.29it/s]
+Extracting data/FashionMNIST/raw/train-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz
+
+  0%|          | 0/4422102 [00:00<?, ?it/s]
+  1%|          | 32768/4422102 [00:00<00:24, 181517.60it/s]
+  1%|1         | 65536/4422102 [00:00<00:24, 181020.74it/s]
+  2%|2         | 98304/4422102 [00:00<00:23, 180928.71it/s]
+  3%|2         | 131072/4422102 [00:00<00:23, 180839.75it/s]
+  4%|4         | 196608/4422102 [00:00<00:20, 208409.78it/s]
+  6%|5         | 262144/4422102 [00:01<00:16, 254696.83it/s]
+  7%|6         | 294912/4422102 [00:01<00:17, 232533.44it/s]
+  8%|8         | 360448/4422102 [00:01<00:14, 271265.16it/s]
+ 10%|9         | 425984/4422102 [00:01<00:13, 298465.83it/s]
+ 11%|#1        | 491520/4422102 [00:01<00:12, 317494.47it/s]
+ 13%|#3        | 589824/4422102 [00:02<00:09, 384219.49it/s]
+ 15%|#4        | 655360/4422102 [00:02<00:09, 377817.08it/s]
+ 17%|#7        | 753664/4422102 [00:02<00:08, 427191.58it/s]
+ 19%|#9        | 851968/4422102 [00:02<00:07, 462001.11it/s]
+ 22%|##2       | 983040/4422102 [00:02<00:06, 538996.55it/s]
+ 25%|##5       | 1114112/4422102 [00:02<00:05, 593421.21it/s]
+ 28%|##8       | 1245184/4422102 [00:03<00:05, 633015.35it/s]
+ 32%|###1      | 1409024/4422102 [00:03<00:04, 713289.79it/s]
+ 36%|###5      | 1572864/4422102 [00:03<00:03, 770606.20it/s]
+ 40%|####      | 1769472/4422102 [00:03<00:03, 864056.14it/s]
+ 44%|####4     | 1966080/4422102 [00:03<00:02, 931022.01it/s]
+ 50%|####9     | 2195456/4422102 [00:04<00:02, 1031381.17it/s]
+ 55%|#####4    | 2424832/4422102 [00:04<00:01, 1105627.36it/s]
+ 62%|######1   | 2719744/4422102 [00:04<00:01, 1255607.41it/s]
+ 68%|######8   | 3014656/4422102 [00:04<00:01, 1365197.95it/s]
+ 76%|#######5  | 3342336/4422102 [00:04<00:00, 1505844.44it/s]
+ 84%|########4 | 3735552/4422102 [00:04<00:00, 1694414.85it/s]
+ 93%|#########3| 4128768/4422102 [00:05<00:00, 1836412.27it/s]
+100%|##########| 4422102/4422102 [00:05<00:00, 840176.89it/s]
+Extracting data/FashionMNIST/raw/t10k-images-idx3-ubyte.gz to data/FashionMNIST/raw
+
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz
+Downloading http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz
+
+  0%|          | 0/5148 [00:00<?, ?it/s]
+100%|##########| 5148/5148 [00:00<00:00, 36784117.53it/s]
+Extracting data/FashionMNIST/raw/t10k-labels-idx1-ubyte.gz to data/FashionMNIST/raw
+Hyperparameters
+Hyperparameters are adjustable parameters that let you control the model optimization process. Different hyperparameter values can impact model training and convergence rates (read more about hyperparameter tuning)
+
+We define the following hyperparameters for training:
+Number of Epochs - the number times to iterate over the dataset
+
+Batch Size - the number of data samples propagated through the network before the parameters are updated
+
+Learning Rate - how much to update models parameters at each batch/epoch. Smaller values yield slow learning speed, while large values may result in unpredictable behavior during training.
+
+learning_rate = 1e-3
+batch_size = 64
+epochs = 5
+Optimization Loop
+Once we set our hyperparameters, we can then train and optimize our model with an optimization loop. Each iteration of the optimization loop is called an epoch.
+
+Each epoch consists of two main parts:
+The Train Loop - iterate over the training dataset and try to converge to optimal parameters.
+
+The Validation/Test Loop - iterate over the test dataset to check if model performance is improving.
+
+Let’s briefly familiarize ourselves with some of the concepts used in the training loop. Jump ahead to see the Full Implementation of the optimization loop.
+
+Loss Function
+When presented with some training data, our untrained network is likely not to give the correct answer. Loss function measures the degree of dissimilarity of obtained result to the target value, and it is the loss function that we want to minimize during training. To calculate the loss we make a prediction using the inputs of our given data sample and compare it against the true data label value.
+
+Common loss functions include nn.MSELoss (Mean Square Error) for regression tasks, and nn.NLLLoss (Negative Log Likelihood) for classification. nn.CrossEntropyLoss combines nn.LogSoftmax and nn.NLLLoss.
+
+We pass our model’s output logits to nn.CrossEntropyLoss, which will normalize the logits and compute the prediction error.
+
+# Initialize the loss function
+loss_fn = nn.CrossEntropyLoss()
+Optimizer
+Optimization is the process of adjusting model parameters to reduce model error in each training step. Optimization algorithms define how this process is performed (in this example we use Stochastic Gradient Descent). All optimization logic is encapsulated in the optimizer object. Here, we use the SGD optimizer; additionally, there are many different optimizers available in PyTorch such as ADAM and RMSProp, that work better for different kinds of models and data.
+
+We initialize the optimizer by registering the model’s parameters that need to be trained, and passing in the learning rate hyperparameter.
+
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+Inside the training loop, optimization happens in three steps:
+Call optimizer.zero_grad() to reset the gradients of model parameters. Gradients by default add up; to prevent double-counting, we explicitly zero them at each iteration.
+
+Backpropagate the prediction loss with a call to loss.backward(). PyTorch deposits the gradients of the loss w.r.t. each parameter.
+
+Once we have our gradients, we call optimizer.step() to adjust the parameters by the gradients collected in the backward pass.
+
+Full Implementation
+We define train_loop that loops over our optimization code, and test_loop that evaluates the model’s performance against our test data.
+
+def train_loop(dataloader, model, loss_fn, optimizer):
+    size = len(dataloader.dataset)
+    # Set the model to training mode - important for batch normalization and dropout layers
+    # Unnecessary in this situation but added for best practices
+    model.train()
+    for batch, (X, y) in enumerate(dataloader):
+        # Compute prediction and loss
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 100 == 0:
+            loss, current = loss.item(), batch * batch_size + len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+
+def test_loop(dataloader, model, loss_fn):
+    # Set the model to evaluation mode - important for batch normalization and dropout layers
+    # Unnecessary in this situation but added for best practices
+    model.eval()
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    test_loss, correct = 0, 0
+
+    # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
+    # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
+    with torch.no_grad():
+        for X, y in dataloader:
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+We initialize the loss function and optimizer, and pass it to train_loop and test_loop. Feel free to increase the number of epochs to track the model’s improving performance.
+
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+epochs = 10
+for t in range(epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    train_loop(train_dataloader, model, loss_fn, optimizer)
+    test_loop(test_dataloader, model, loss_fn)
+print("Done!")
+Epoch 1
+-------------------------------
+loss: 2.298730  [   64/60000]
+loss: 2.289123  [ 6464/60000]
+loss: 2.273286  [12864/60000]
+loss: 2.269406  [19264/60000]
+loss: 2.249603  [25664/60000]
+loss: 2.229407  [32064/60000]
+loss: 2.227368  [38464/60000]
+loss: 2.204261  [44864/60000]
+loss: 2.206193  [51264/60000]
+loss: 2.166651  [57664/60000]
+Test Error:
+ Accuracy: 50.9%, Avg loss: 2.166725
+
+Epoch 2
+-------------------------------
+loss: 2.176750  [   64/60000]
+loss: 2.169595  [ 6464/60000]
+
+Save and Load the Model
+In this section we will look at how to persist model state with saving, loading and running model predictions.
+
+import torch
+import torchvision.models as models
+Saving and Loading Model Weights
+PyTorch models store the learned parameters in an internal state dictionary, called state_dict. These can be persisted via the torch.save method:
+
+model = models.vgg16(weights='IMAGENET1K_V1')
+torch.save(model.state_dict(), 'model_weights.pth')
+Downloading: "https://download.pytorch.org/models/vgg16-397923af.pth" to /var/lib/ci-user/.cache/torch/hub/checkpoints/vgg16-397923af.pth
+
+  0%|          | 0.00/528M [00:00<?, ?B/s]
+  2%|1         | 9.62M/528M [00:00<00:05, 97.8MB/s]
+  4%|3         | 19.0M/528M [00:00<00:05, 96.6MB/s]
+  7%|6         | 36.5M/528M [00:00<00:03, 136MB/s]
+ 10%|#         | 54.0M/528M [00:00<00:03, 154MB/s]
+ 14%|#3        | 71.5M/528M [00:00<00:02, 165MB/s]
+ 17%|#6        | 89.1M/528M [00:00<00:02, 171MB/s]
+ 20%|##        | 107M/528M [00:00<00:02, 175MB/s]
+ 24%|##3       | 124M/528M [00:00<00:02, 178MB/s]
+ 27%|##6       | 142M/528M [00:00<00:02, 180MB/s]
+ 30%|###       | 160M/528M [00:01<00:02, 181MB/s]
+ 34%|###3      | 177M/528M [00:01<00:02, 181MB/s]
+ 37%|###6      | 194M/528M [00:01<00:01, 182MB/s]
+ 40%|####      | 212M/528M [00:01<00:01, 182MB/s]
+ 43%|####3     | 229M/528M [00:01<00:01, 182MB/s]
+ 47%|####6     | 247M/528M [00:01<00:01, 182MB/s]
+ 50%|#####     | 264M/528M [00:01<00:01, 182MB/s]
+ 53%|#####3    | 282M/528M [00:01<00:01, 183MB/s]
+ 57%|#####6    | 299M/528M [00:01<00:01, 182MB/s]
+ 60%|######    | 317M/528M [00:01<00:01, 182MB/s]
+ 63%|######3   | 334M/528M [00:02<00:01, 182MB/s]
+ 67%|######6   | 352M/528M [00:02<00:01, 182MB/s]
+ 70%|######9   | 369M/528M [00:02<00:00, 182MB/s]
+ 73%|#######3  | 387M/528M [00:02<00:00, 183MB/s]
+ 77%|#######6  | 405M/528M [00:02<00:00, 183MB/s]
+ 80%|#######9  | 422M/528M [00:02<00:00, 183MB/s]
+ 83%|########3 | 440M/528M [00:02<00:00, 183MB/s]
+ 87%|########6 | 457M/528M [00:02<00:00, 183MB/s]
+ 90%|########9 | 475M/528M [00:02<00:00, 183MB/s]
+ 93%|#########3| 492M/528M [00:02<00:00, 183MB/s]
+ 97%|#########6| 510M/528M [00:03<00:00, 183MB/s]
+100%|##########| 528M/528M [00:03<00:00, 184MB/s]
+100%|##########| 528M/528M [00:03<00:00, 177MB/s]
+To load model weights, you need to create an instance of the same model first, and then load the parameters using load_state_dict() method.
+
+model = models.vgg16() # we do not specify ``weights``, i.e. create untrained model
+model.load_state_dict(torch.load('model_weights.pth'))
+model.eval()
+VGG(
+  (features): Sequential(
+    (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+    (2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (3): ReLU(inplace=True)
+    (4): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (5): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (6): ReLU(inplace=True)
+    (7): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (8): ReLU(inplace=True)
+    (9): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (10): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (11): ReLU(inplace=True)
+    (12): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (13): ReLU(inplace=True)
+    (14): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (15): ReLU(inplace=True)
+    (16): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (17): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (18): ReLU(inplace=True)
+    (19): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (20): ReLU(inplace=True)
+    (21): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (22): ReLU(inplace=True)
+    (23): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (24): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (25): ReLU(inplace=True)
+    (26): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (27): ReLU(inplace=True)
+    (28): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (29): ReLU(inplace=True)
+    (30): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  )
+  (avgpool): AdaptiveAvgPool2d(output_size=(7, 7))
+  (classifier): Sequential(
+    (0): Linear(in_features=25088, out_features=4096, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Dropout(p=0.5, inplace=False)
+    (3): Linear(in_features=4096, out_features=4096, bias=True)
+    (4): ReLU(inplace=True)
+    (5): Dropout(p=0.5, inplace=False)
+    (6): Linear(in_features=4096, out_features=1000, bias=True)
+  )
+)
+NOTE
+
+be sure to call model.eval() method before inferencing to set the dropout and batch normalization layers to evaluation mode. Failing to do this will yield inconsistent inference results.
+
+Saving and Loading Models with Shapes
+When loading model weights, we needed to instantiate the model class first, because the class defines the structure of a network. We might want to save the structure of this class together with the model, in which case we can pass model (and not model.state_dict()) to the saving function:
+
+torch.save(model, 'model.pth')
+We can then load the model like this:
+
+model = torch.load('model.pth')
+NOTE
+
+This approach uses Python pickle module when serializing the model, thus it relies on the actual class definition to be available when loading the model.

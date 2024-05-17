@@ -12,12 +12,12 @@ import speech_recognition as sr
 import whisper
 from pathlib import Path
 from playsound import playsound
+import os
 
 """
 Interactive Assistant
 
 """
-
 
 def capture_image(cap):
 
@@ -27,8 +27,8 @@ def capture_image(cap):
     if not ret:
         print("Error: Could not read frame")
         return
-    frame = cv2.flip(frame, 0)
-    frame = cv2.flip(frame, 1)
+    #frame = cv2.flip(frame, 0)
+    #frame = cv2.flip(frame, 1)
     # Display the captured image
     cv2.imshow("Captured Image", frame)
 
@@ -48,20 +48,21 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def assistant(llm_input, cap, llm_history):
+def assistant(llm_input, cap, llm_history, client):
 
     # Capture an image of the student's work
     capture_image(cap)
 
     base64_image = encode_image("captured_image.jpg")
-    client = OpenAI(api_key="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")
+    
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {
                 "role": "system",
-                "content": "You are an assistant. Help the user with their question with the image provided.",
+                "content": "You are an assistant. Help the user with their question with the image provided. Response should be 2 sentences max.",
             },
             {
                 "role": "user",
@@ -118,6 +119,7 @@ def detect_and_record_audio(threshold=0.03, silence_duration=3, record_duration=
 
 def main():
     llm_history = []
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
     while True:
@@ -130,11 +132,10 @@ def main():
         llm_input = result["text"]
         print(llm_input)
         
-        llm_output = assistant(llm_input, cap, llm_history)
+        llm_output = assistant(llm_input, cap, llm_history, client)
         llm_history = llm_history + [{"role": "assistant", "content": llm_output}]
         print(llm_output)
 
-        client = OpenAI()
 
 
         response = client.audio.speech.create(
