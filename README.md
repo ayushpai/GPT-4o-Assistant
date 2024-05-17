@@ -1,4 +1,4 @@
-## Interactive Assistant Using GPT-4o
+# Interactive Assistant Using GPT-4o
 
 This repository contains the code for an advanced interactive assistant powered by OpenAI's newest model, GPT-4o. The assistant leverages multiple inputs, including screenshots and audio, to provide contextual and accurate responses to user queries. It integrates with a document database to ensure responses are based on relevant context from provided documents.
 
